@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>名字开花</title>
+<link rel="icon" href="data:,">
+<style>
+:root{--paper:#f9eef1;--muted:#c9b7bd;--dim:#8f7e87;--pink:#dc7095;--pink-deep:#9d345d;--line:rgba(255,255,255,.15)}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#100b11;color:var(--paper);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+body{background:radial-gradient(100% 60% at 50% 82%,#51303d 0%,#21131d 44%,#0f0a10 100%)}
+#app{position:relative;width:100%;height:100%;isolation:isolate}
+#scene{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;z-index:1}
+.masthead{position:absolute;z-index:3;top:clamp(34px,7vh,76px);left:0;right:0;text-align:center;pointer-events:none;padding:0 20px}
+.brand{font-size:10px;letter-spacing:.5em;text-indent:.5em;color:var(--dim);margin-bottom:14px}
+h1{margin:0;font-family:"Songti SC","STSong",serif;font-size:clamp(46px,8vw,92px);font-weight:500;line-height:1.08;letter-spacing:.06em;background:linear-gradient(180deg,#fffdf9 5%,#f7dfe7 58%,#d98ca9 100%);background-clip:text;-webkit-background-clip:text;color:transparent;text-shadow:0 12px 40px rgba(244,197,215,.12)}
+.subtitle{max-width:430px;margin:16px auto 0;font-size:13px;line-height:1.75;letter-spacing:.04em;color:var(--muted)}
+.hint{position:absolute;z-index:3;left:50%;top:61%;transform:translateX(-50%);font:11px "Songti SC",serif;letter-spacing:.38em;text-indent:.38em;color:rgba(250,224,235,.48);pointer-events:none;transition:opacity .35s}
+.controls{position:absolute;z-index:4;left:50%;bottom:max(30px,calc(5vh + env(safe-area-inset-bottom)));transform:translateX(-50%);display:flex;align-items:center;gap:10px;width:min(630px,calc(100% - 32px))}
+.name-field{height:52px;display:flex;align-items:center;gap:12px;flex:1;min-width:0;padding:0 8px 0 17px;border:1px solid var(--line);background:rgba(21,12,20,.62);backdrop-filter:blur(18px);border-radius:8px;box-shadow:0 12px 35px rgba(0,0,0,.16)}
+.name-field label{font-size:12px;letter-spacing:.12em;color:var(--dim);white-space:nowrap}
+input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:var(--paper);font-size:16px;font-family:inherit}
+button{height:52px;border:1px solid transparent;border-radius:8px;padding:0 20px;color:#fff;background:#c95178;box-shadow:0 12px 25px rgba(178,52,94,.25);font:500 14px/1 inherit;cursor:pointer;white-space:nowrap;transition:transform .18s,background .18s}
+button:hover{background:#d96089;transform:translateY(-1px)}
+button:active{transform:translateY(0)}
+button.secondary{background:rgba(255,255,255,.055);border-color:var(--line);box-shadow:none;color:var(--muted)}
+button.secondary:hover{background:rgba(255,255,255,.10);color:#fff}
+.foot{position:absolute;z-index:3;bottom:18px;left:22px;color:rgba(255,255,255,.24);font:9px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.14em;pointer-events:none}
+@media(max-width:760px){
+  .masthead{top:max(28px,calc(3vh + env(safe-area-inset-top)));padding:0 18px}
+  .brand{font-size:8px;margin-bottom:10px;letter-spacing:.42em;text-indent:.42em}
+  h1{font-size:clamp(34px,10vw,48px)}
+  .subtitle{margin-top:10px;font-size:11px;line-height:1.65}
+  .hint{top:58%;font-size:9px}
+  .controls{bottom:max(18px,calc(2.7vh + env(safe-area-inset-bottom)));display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .name-field{grid-column:1/-1;height:52px;width:100%;padding-left:14px;gap:6px}
+  .name-field label{display:none}
+  button{height:48px;width:100%;padding:0 6px;font-size:12px}
+  .foot{display:none}
+}
+</style>
+</head>
+<body>
+<main id="app">
+  <canvas id="scene" aria-label="一束由流光绽放而成的玫瑰"></canvas>
+  <section class="masthead" aria-live="polite">
+    <div class="brand">名字开花</div>
+    <h1 id="title">刘映辰</h1>
+    <p class="subtitle">让名字化作流光，落成一束真正盛开的玫瑰。</p>
+  </section>
+  <div class="hint" id="hint">轻触花束，流光会随指尖摇曳</div>
+  <form class="controls" id="controls">
+    <div class="name-field"><label for="name">名字</label><input id="name" value="刘映辰" maxlength="8" aria-label="名字"></div>
+    <button id="play" type="submit">开始绽放</button>
+    <button id="share" class="secondary" type="button">复制链接</button>
+    <button id="replay" class="secondary" type="button">重播</button>
+  </form>
+  <div class="foot">ROSE STUDY · THREE.JS</div>
+</main>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js';
+
+const canvas=document.querySelector('#scene');
+const title=document.querySelector('#title');
+const input=document.querySelector('#name');
+const form=document.querySelector('#controls');
+const share=document.querySelector('#share');
+const replay=document.querySelector('#replay');
+const hint=document.querySelector('#hint');
+const mobile=matchMedia('(max-width:760px)');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'high-performance'});
+renderer.setClearColor(0x000000,0);
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.18;
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x160d15,.055);
+const camera=new THREE.PerspectiveCamera(32,1,.1,100);
+camera.position.set(0,.12,15);
+camera.lookAt(0,-.48,0);
+scene.add(new THREE.HemisphereLight(0xffe9ee,0x15251f,2.1));
+const key=new THREE.DirectionalLight(0xffe1ea,4.2);key.position.set(-4,6,7);scene.add(key);
+const rim=new THREE.PointLight(0xff8caf,22,15,2);rim.position.set(4,1.6,5);scene.add(rim);
+const fill=new THREE.PointLight(0xffefb6,15,12,2);fill.position.set(-4,.3,4);scene.add(fill);
+
+const bouquet=new THREE.Group();bouquet.position.set(0,-.82,0);bouquet.scale.setScalar(1.17);scene.add(bouquet);
+const decor=new THREE.Group();bouquet.add(decor);
+const petals=[];
+const petalShape=new THREE.Shape();
+petalShape.moveTo(0,0);
+petalShape.bezierCurveTo(-.32,.08,-.50,.55,-.30,.98);
+petalShape.bezierCurveTo(-.20,1.28,-.07,1.20,0,1.09);
+petalShape.bezierCurveTo(.07,1.20,.20,1.28,.30,.98);
+petalShape.bezierCurveTo(.50,.55,.32,.08,0,0);
+const petalGeometry=new THREE.ShapeGeometry(petalShape,10);
+const petalPos=petalGeometry.attributes.position;
+for(let i=0;i<petalPos.count;i++){
+  const y=petalPos.getY(i),x=petalPos.getX(i);
+  petalPos.setZ(i,.22*Math.pow(Math.max(0,y),1.55)-.18*x*x);
+}
+petalGeometry.computeVertexNormals();
+const petalMaterial=new THREE.MeshBasicMaterial({color:0xeb789b,side:THREE.DoubleSide,transparent:true,opacity:.94,depthWrite:true});
+const roseSpecs=[
+  [-2.02,.18,.74,.15],[-1.23,.55,.92,.32],[-.30,.30,1.03,.48],[.72,.48,.96,.62],[1.70,.18,.76,.78],
+  [-1.53,-.54,.87,.25],[-.65,-.40,.98,.45],[.37,-.43,1.00,.64],[1.34,-.58,.84,.82],[0,-1.15,.77,.55]
+];
+const rings=[{count:5,r:.02,s:.30},{count:7,r:.08,s:.43},{count:10,r:.16,s:.58},{count:13,r:.28,s:.74},{count:16,r:.43,s:.91}];
+const petalCount=roseSpecs.reduce((sum)=>sum+rings.reduce((n,ring)=>n+ring.count,0),0);
+const petalMesh=new THREE.InstancedMesh(petalGeometry,petalMaterial,petalCount);
+petalMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);bouquet.add(petalMesh);
+const dummy=new THREE.Object3D();
+const roseInner=new THREE.Color('#7f123f');
+const roseMid=new THREE.Color('#d74f7d');
+const roseOuter=new THREE.Color('#ffd9df');
+function rand(a,b){return a+Math.random()*(b-a)}
+function addRose(spec,index){
+  const [cx,cy,size,hue]=spec;
+  let n=index;
+  rings.forEach((ring,ringIndex)=>{
+    for(let i=0;i<ring.count;i++){
+      const angle=(i/ring.count)*Math.PI*2+ringIndex*.62+rand(-.13,.13);
+      const radial=ring.r*size*(1+rand(-.09,.10));
+      const target=new THREE.Vector3(cx+Math.sin(angle)*radial,cy+Math.cos(angle)*radial,.16-ringIndex*.07+rand(-.035,.035));
+      const scale=new THREE.Vector3(ring.s*size*(1+rand(-.10,.1)),ring.s*size*(.92+rand(-.08,.12)),1);
+      const rotation=new THREE.Euler(.12+ringIndex*.09+rand(-.10,.10),rand(-.22,.22),-angle+Math.PI+rand(-.11,.11));
+      const color=new THREE.Color().lerpColors(roseInner,roseMid,Math.min(1,ringIndex/2.4));
+      color.lerp(roseOuter,Math.max(0,(ringIndex-1.2)/4.2));
+      color.offsetHSL((hue-.5)*.035,rand(-.045,.04),rand(-.035,.06));
+      petalMesh.setColorAt(n,color);
+      petals.push({slot:n,target,scale,rotation,delay:Math.random()*.30,from:new THREE.Vector3(),spin:rand(-5,5),seed:Math.random()});
+      n++;
+    }
+  });
+  return n;
+}
+let slot=0;roseSpecs.forEach(spec=>{slot=addRose(spec,slot)});petalMesh.instanceColor.needsUpdate=true;
+
+const wrapMaterial=new THREE.MeshPhysicalMaterial({color:0xdba7b8,roughness:.76,metalness:0,side:THREE.DoubleSide,transparent:true,opacity:.83});
+function wrapPanel(points,z,rot){
+  const shape=new THREE.Shape();shape.moveTo(points[0][0],points[0][1]);points.slice(1).forEach(p=>shape.lineTo(p[0],p[1]));shape.closePath();
+  const mesh=new THREE.Mesh(new THREE.ShapeGeometry(shape),wrapMaterial);mesh.position.z=z;mesh.rotation.z=rot;decor.add(mesh);
+}
+wrapPanel([[-2.8,-.22],[-.12,-2.76],[-.34,-.08]],-.78,-.07);
+wrapPanel([[.20,-.08],[2.82,-.30],[.10,-2.76]],-.77,.07);
+const stemMat=new THREE.MeshStandardMaterial({color:0x557b65,roughness:.78,transparent:true,opacity:0});
+roseSpecs.forEach((rose,i)=>{
+  const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(rose[0],rose[1]-.05,-.50),new THREE.Vector3(rose[0]*.55,-1.20,-.70),new THREE.Vector3((i-4.5)*.035,-2.57,-.70)]);
+  const stem=new THREE.Mesh(new THREE.TubeGeometry(curve,18,.026,5,false),stemMat);decor.add(stem);
+});
+const leafShape=new THREE.Shape();leafShape.moveTo(0,0);leafShape.quadraticCurveTo(-.44,.26,0,.88);leafShape.quadraticCurveTo(.44,.26,0,0);
+const leafGeo=new THREE.ShapeGeometry(leafShape,8);
+const leafMat=new THREE.MeshPhysicalMaterial({color:0x5e9275,roughness:.63,side:THREE.DoubleSide,transparent:true,opacity:0});
+[[ -2.02,-.90,-.84,.82],[1.82,-.82,-.72,-.82],[-1.20,-1.56,-.66,.78],[1.09,-1.58,-.67,-.74],[-2.36,-.30,-.67,.58],[2.32,-.37,-.67,-.58]].forEach(([x,y,z,rotation])=>{
+  const leaf=new THREE.Mesh(leafGeo,leafMat);leaf.position.set(x,y,z);leaf.rotation.set(.18,0,rotation);leaf.scale.setScalar(.72);decor.add(leaf);
+});
+const bowMat=new THREE.MeshPhysicalMaterial({color:0xd9547e,roughness:.38,clearcoat:.2,side:THREE.DoubleSide,transparent:true,opacity:0});
+const bowShape=new THREE.Shape();bowShape.moveTo(0,0);bowShape.bezierCurveTo(-.7,.55,-1.05,-.28,-.12,-.25);bowShape.bezierCurveTo(-.35,-.06,-.28,.05,0,0);
+const bowGeo=new THREE.ShapeGeometry(bowShape,10);
+[-1,1].forEach(side=>{const bow=new THREE.Mesh(bowGeo,bowMat);bow.position.set(side*.11,-2.62,.08);bow.rotation.z=side===1?0:Math.PI;bow.scale.set(.57,.57,.57);decor.add(bow)});
+const knotMat=new THREE.MeshPhysicalMaterial({color:0xf084a7,roughness:.33,clearcoat:.35,transparent:true,opacity:0});
+const knot=new THREE.Mesh(new THREE.SphereGeometry(.16,18,12),knotMat);knot.position.set(0,-2.62,.10);decor.add(knot);
+
+const fillerGeometry=new THREE.BufferGeometry();
+const fillerCount=mobile.matches?115:190;
+const fillerPos=new Float32Array(fillerCount*3);const fillerColor=new Float32Array(fillerCount*3);
+const cream=new THREE.Color('#fff1df'),gold=new THREE.Color('#f5d395');
+for(let i=0;i<fillerCount;i++){
+  const side=Math.random()<.5?-1:1,spread=rand(.8,2.72),y=rand(-.76,.86);
+  fillerPos.set([side*spread,y,rand(-.35,.3)],i*3);
+  const c=Math.random()<.68?cream:gold;fillerColor.set([c.r,c.g,c.b],i*3);
+}
+fillerGeometry.setAttribute('position',new THREE.BufferAttribute(fillerPos,3));fillerGeometry.setAttribute('color',new THREE.BufferAttribute(fillerColor,3));
+const fillerMat=new THREE.PointsMaterial({size:.055,vertexColors:true,transparent:true,opacity:.86,sizeAttenuation:true,depthWrite:false});
+const filler=new THREE.Points(fillerGeometry,fillerMat);filler.position.z=.35;bouquet.add(filler);
+
+const starGeometry=new THREE.BufferGeometry();
+const starCount=mobile.matches?1800:3200;
+const particlePositions=new Float32Array(starCount*3);const particleColors=new Float32Array(starCount*3);const particleStarts=[];const particleEnds=[];const particleControlA=[];const particleControlB=[];const particleSeeds=[];
+const stars=new THREE.Points(starGeometry,new THREE.PointsMaterial({size:mobile.matches?.065:.052,vertexColors:true,transparent:true,opacity:.98,blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true}));scene.add(stars);
+starGeometry.setAttribute('position',new THREE.BufferAttribute(particlePositions,3));starGeometry.setAttribute('color',new THREE.BufferAttribute(particleColors,3));
+const starMat=stars.material;
+const nameCanvas=document.createElement('canvas');const nameCtx=nameCanvas.getContext('2d',{willReadFrequently:true});
+function sampledName(text,count){
+  nameCanvas.width=1200;nameCanvas.height=260;nameCtx.clearRect(0,0,1200,260);nameCtx.fillStyle='#fff';nameCtx.textAlign='center';nameCtx.textBaseline='middle';
+  const size=Math.min(190,980/Math.max(1,text.length));nameCtx.font=`600 ${size}px "PingFang SC",sans-serif`;nameCtx.fillText(text,600,130);
+  const data=nameCtx.getImageData(0,0,1200,260).data,choices=[];
+  for(let y=0;y<260;y+=4)for(let x=0;x<1200;x+=4)if(data[(y*1200+x)*4+3]>80)choices.push([x,y]);
+  if(!choices.length)choices.push([600,130]);
+  return Array.from({length:count},(_,i)=>choices[(Math.random()*choices.length)|0]);
+}
+function normalizedName(value){return (value||'').trim().slice(0,8)||'刘映辰'}
+function updateShareUrl(){
+  const url=new URL(location.href);url.searchParams.set('name',normalizedName(input.value));history.replaceState(null,'',url);
+  return url.toString();
+}
+function resetAnimation(){
+  const text=normalizedName(input.value);input.value=text;title.textContent=text;updateShareUrl();
+  const points=sampledName(text,Math.max(starCount,petals.length));
+  petals.forEach((petal,i)=>{
+    const q=points[i%points.length];
+    petal.from.set((q[0]/1200-.5)*4.8,(.5-q[1]/260)*.92+2.15,rand(.15,.72));
+  });
+  particleStarts.length=0;particleEnds.length=0;particleControlA.length=0;particleControlB.length=0;particleSeeds.length=0;
+  for(let i=0;i<starCount;i++){
+    const q=points[i%points.length];
+    const start=new THREE.Vector3((q[0]/1200-.5)*4.8,(.5-q[1]/260)*.92+2.15,rand(.15,.8));
+    const petal=petals[(Math.random()*petals.length)|0];
+    const long=petal.scale.y*rand(.10,.92),wide=petal.scale.x*rand(-.30,.30)*(1-long/petal.scale.y*.55),angle=petal.rotation.z;
+    const anchor=petal.target.clone().add(new THREE.Vector3(Math.cos(angle)*wide-Math.sin(angle)*long,Math.sin(angle)*wide+Math.cos(angle)*long,rand(-.08,.15)));
+    const end=bouquet.localToWorld(anchor);
+    particleStarts.push(start);particleEnds.push(end);
+    particleControlA.push(start.clone().add(new THREE.Vector3(rand(-.95,.95),-rand(.18,1.20),rand(-.45,.35))));
+    particleControlB.push(end.clone().add(new THREE.Vector3(rand(-.72,.72),rand(.30,1.18),rand(-.35,.50))));
+    particleSeeds.push(Math.random());
+    const c=i%4===0?new THREE.Color('#f9d982'):new THREE.Color('#f8dce6');particleColors.set([c.r,c.g,c.b],i*3);
+  }
+  starGeometry.attributes.color.needsUpdate=true;
+  bloomStart=performance.now();hint.style.opacity='.8';
+}
+let bloomStart=performance.now();
+let pointerX=0,pointerY=0,targetX=0,targetY=0;
+function ease(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2}
+function resize(){
+  const width=innerWidth,height=innerHeight;renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobile.matches?1.35:1.8));renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();bouquet.scale.setScalar(mobile.matches ? .90 : 1.17);
+}
+addEventListener('resize',resize,{passive:true});resize();
+canvas.addEventListener('pointermove',event=>{targetX=(event.clientX/innerWidth-.5)*2;targetY=(event.clientY/innerHeight-.5)*2},{passive:true});
+canvas.addEventListener('pointerdown',()=>{bloomStart=performance.now()-2500;hint.style.opacity='0'});
+form.addEventListener('submit',event=>{event.preventDefault();resetAnimation()});replay.addEventListener('click',resetAnimation);
+share.addEventListener('click',async()=>{
+  const link=updateShareUrl();
+  try{await navigator.clipboard.writeText(link);share.textContent='已复制';setTimeout(()=>share.textContent='复制链接',1400)}catch{share.textContent='复制失败';setTimeout(()=>share.textContent='复制链接',1400)}
+});
+input.addEventListener('input',()=>{const text=normalizedName(input.value);title.textContent=text;updateShareUrl()});
+const temp=new THREE.Vector3();
+function render(now){
+  requestAnimationFrame(render);
+  pointerX+=(targetX-pointerX)*.045;pointerY+=(targetY-pointerY)*.045;
+  const p=Math.min(1,(now-bloomStart)/6400);const flowerIn=THREE.MathUtils.smoothstep(p,.76,.98);
+  petalMaterial.opacity=flowerIn*.94;wrapMaterial.opacity=flowerIn*.83;stemMat.opacity=flowerIn*.90;leafMat.opacity=flowerIn*.94;bowMat.opacity=flowerIn*.94;knotMat.opacity=flowerIn;fillerMat.opacity=flowerIn*.82;decor.visible=flowerIn>.001;
+  petalMesh.visible=flowerIn>.001;
+  petals.forEach(petal=>{
+    dummy.position.copy(petal.target);dummy.rotation.copy(petal.rotation);dummy.scale.copy(petal.scale);dummy.updateMatrix();petalMesh.setMatrixAt(petal.slot,dummy.matrix);
+  });
+  petalMesh.instanceMatrix.needsUpdate=true;
+  for(let i=0;i<starCount;i++){
+    const delay=particleSeeds[i]*.13;const q=Math.min(1,Math.max(0,(p-.12-delay)/.73));const t=ease(q),u=1-t;
+    const a=particleStarts[i],c1=particleControlA[i],c2=particleControlB[i],b=particleEnds[i],swirl=Math.sin(Math.PI*t)*(.09+particleSeeds[i]*.12),phase=now*.0024+particleSeeds[i]*38;
+    particlePositions[i*3]=u*u*u*a.x+3*u*u*t*c1.x+3*u*t*t*c2.x+t*t*t*b.x+Math.cos(phase)*swirl;
+    particlePositions[i*3+1]=u*u*u*a.y+3*u*u*t*c1.y+3*u*t*t*c2.y+t*t*t*b.y+Math.sin(phase*1.17)*swirl;
+    particlePositions[i*3+2]=u*u*u*a.z+3*u*u*t*c1.z+3*u*t*t*c2.z+t*t*t*b.z+Math.sin(phase*.71)*swirl;
+  }
+  starGeometry.attributes.position.needsUpdate=true;starMat.opacity=.98*(1-THREE.MathUtils.smoothstep(p,.82,1));
+  hint.textContent=p<.16?'名字聚光':p<.76?'流光汇聚':p<.99?'花束盛开':'轻触花束，流光会随指尖摇曳';
+  bouquet.rotation.y=pointerX*.09;bouquet.rotation.x=-pointerY*.035;bouquet.position.x=pointerX*.10;bouquet.position.y=-.82-pointerY*.05;
+  filler.rotation.z=now*.00016;renderer.render(scene,camera);
+}
+input.value=normalizedName(new URLSearchParams(location.search).get('name')||input.value);
+resetAnimation();requestAnimationFrame(render);
+</script>
+</body>
+</html>

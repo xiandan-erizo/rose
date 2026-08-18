@@ -1,0 +1,12 @@
+# Local deployment state
+.wrangler/
+
+# Browser automation artifacts
+.playwright-cli/
+output/
+
+# Local assistant settings
+.claude/settings.local.json
+
+# OS metadata
+.DS_Store

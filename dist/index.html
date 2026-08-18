@@ -713,7 +713,7 @@ if (currentName) rebuildName();
 ============================================================ */
 let t = 0, clock = 0, last = performance.now();
 let mx = 0, my = 0, camX = 0, camY = 0;
-let oriX = 0, oriY = 0;          // 重力感应视差目标（手机）
+let oriX = 0, oriY = 0, oriActive = false;   // 重力感应视差目标（手机）
 /* 启用陀螺仪视差：iOS 需在用户手势内请求权限，Android 直接监听 */
 let oriOn = false;
 function enableOrientation(){
@@ -724,6 +724,7 @@ function enableOrientation(){
     oriOn = true;
     addEventListener('deviceorientation', e => {
       if (e.gamma == null || e.beta == null) return;
+      oriActive = true;
       const nx = Math.max(-1, Math.min(1, e.gamma / 35));          // 左右倾 ±35° -> ±1
       const ny = Math.max(-1, Math.min(1, (e.beta - 65) / 30));    // 前后倾，以正常握持(~65°)为中心
       oriX += (nx - oriX) * 0.12;
@@ -854,13 +855,14 @@ function frame(now){
   }
   if (started && t > T_ASSEMBLE + 0.4) refreshEl.classList.add('show');
 
-  window.__rose = { t, started, p: uniforms.uProgress.value, q: uniforms.uBouquet.value, cx: camera.position.x, cy: camera.position.y };
+  window.__rose = { t, started, p: uniforms.uProgress.value, q: uniforms.uBouquet.value, cx: camera.position.x, cy: camera.position.y, ox: oriX, oy: oriY };
   /* 相机：开场推镜 + 鼠标视差（轻微，不扰动粒子） */
-  /* 触屏走陀螺仪视差，桌面走鼠标；都带出花束 3D 纵深 */
-  const pX = coarse ? oriX : mx;
-  const pY = coarse ? oriY : my;
-  camX += (pX * 1.05 - camX) * 0.045;
-  camY += (pY * 0.62 - camY) * 0.045;
+  /* 收到过陀螺仪数据就走重力感应(手机)，否则走鼠标(桌面) */
+  const pX = oriActive ? oriX : mx;
+  const pY = oriActive ? oriY : my;
+  const lk = 1 - Math.exp(-dt * 3.2);   // 时间无关的平滑，弱 GPU 也能跟上
+  camX += (pX * 1.05 - camX) * lk;
+  camY += (pY * 0.62 - camY) * lk;
   const push = 1 + 0.25 * (1 - smooth01(t / 3.4));
   camera.position.set(camX, 0.9 + camY, baseZ * push);
   camera.lookAt(0, 0.9, 0);
@@ -879,6 +881,7 @@ function frame(now){
   if (started){
     syncMeta();                         // 带尾巴链接直达：标题/献词就位，直接播放
     landingEl.remove();                 // 直达模式不显示输入卡片
+    enableOrientation();                // Android/无权限环境直接挂载；iOS 待首次手势
   } else {
     setTimeout(() => landingInput.focus(), 500);
   }

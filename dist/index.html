@@ -61,6 +61,28 @@
   #start:hover{background:rgba(224,182,102,.26)}
   #landing .tip{margin-top:18px;font-size:10px;letter-spacing:.3em;text-indent:.3em;color:rgba(243,222,176,.35)}
 
+  /* ---- 绽放提示（名字定格后浮现，点击即绽放）---- */
+  #cue{position:fixed;left:50%;top:60%;transform:translateX(-50%);z-index:3;pointer-events:none;
+    font-size:12px;letter-spacing:.5em;text-indent:.5em;color:rgba(243,222,176,.55);
+    opacity:0;transition:opacity 1.6s ease;white-space:nowrap;
+    animation:cuePulse 2.6s ease-in-out infinite}
+  #cue.show{opacity:1}
+  @keyframes cuePulse{0%,100%{text-shadow:0 0 6px rgba(233,180,92,.12)}
+    50%{text-shadow:0 0 18px rgba(233,180,92,.5)}}
+
+  /* ---- 重新播放（小刷新图标，右下角）---- */
+  #refresh{position:fixed;right:max(18px,calc(2vw + env(safe-area-inset-right)));
+    bottom:max(18px,calc(2.4vh + env(safe-area-inset-bottom)));
+    width:40px;height:40px;border-radius:50%;border:1px solid var(--line);
+    background:rgba(10,8,18,.55);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    color:rgba(243,222,176,.6);display:flex;align-items:center;justify-content:center;
+    cursor:pointer;opacity:0;pointer-events:none;z-index:5;padding:0;
+    transition:opacity 1s ease,transform .18s ease,background .25s,color .25s}
+  #refresh.show{opacity:1;pointer-events:auto}
+  #refresh:hover{background:rgba(233,180,92,.14);color:#f3deb0}
+  #refresh:active{transform:scale(.88)}
+  #refresh svg{width:17px;height:17px;display:block}
+
   /* ---- 复制提示（轻点复制）---- */
   #toast{position:fixed;left:50%;bottom:calc(max(26px, 3.4vh + env(safe-area-inset-bottom)) + 76px);
     transform:translateX(-50%);z-index:6;font-size:11px;letter-spacing:.3em;text-indent:.3em;
@@ -117,6 +139,13 @@
     <div class="tip">生成专属链接 · 把一束花送给 TA</div>
   </div>
 </div>
+<div id="cue">✦ 轻触 · 绽放 ✦</div>
+<button id="refresh" aria-label="重新播放" title="重新播放">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
+    <polyline points="21 3 21 9 15 9"/>
+  </svg>
+</button>
 <div id="toast">✦ 专属链接已生成 · 轻点此处复制</div>
 
 <div id="loading">
@@ -146,11 +175,9 @@ const DEDICATION   = '愿你的每一天，都如花绽放';
 const FONT_STACK   = '"Noto Serif SC","Songti SC","STSong","SimSun",serif';
 const sanitizeName = s => (s || '').replace(/\s+/g, ' ').trim().slice(0, 12);
 const NAME_Y       = 1.5;               // 名字在世界坐标的中心高度
-const T_ASSEMBLE   = 2.6;               // 星尘 -> 名字
-const T_HOLD       = 2.9;               // 名字定格呼吸
-const T_MORPH      = 3.7;               // 碎裂消散 -> 花束
-const T_MORPH_START= T_ASSEMBLE + T_HOLD;
-const T_MORPH_END  = T_MORPH_START + T_MORPH;
+const T_ASSEMBLE   = 2.6;               // 星尘 -> 名字（名字定格后等待点击绽放）
+const T_MORPH      = 3.7;               // 点击后：碎裂消散 -> 花束
+let morphStart = Infinity;              // 点击绽放的时刻（Infinity = 尚未点击）
 
 const isMobile = matchMedia('(pointer:coarse)').matches || innerWidth < 760;
 const COUNT    = isMobile ? 13000 : 30000;
@@ -525,16 +552,13 @@ const uniforms = {
   uPixelRatio:{ value:Math.min(devicePixelRatio, DPR_CAP) },
   /* 点尺寸 ∝ 屏高/√粒子数：保证各设备加色覆盖率一致，避免过曝或稀疏 */
   uSizeScale:{ value: sizeScaleForHeight(innerHeight) },
-  uMouse:{ value: new THREE.Vector3(99, 99, 0) },
-  uMouseF:{ value: 0.42 },
 };
 
 const mat = new THREE.ShaderMaterial({
   uniforms, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
   vertexShader:`
     uniform float uTime, uAssemble, uProgress, uBurst, uBouquet;
-    uniform float uPixelRatio, uSizeScale, uMouseF;
-    uniform vec3 uMouse;
+    uniform float uPixelRatio, uSizeScale;
     attribute vec3 aFlowerPos;
     attribute vec3 aNameColor;
     attribute vec3 aFlowerColor;
@@ -607,11 +631,6 @@ const mat = new THREE.ShaderMaterial({
         p = mix(p, fp, uBouquet);
         petalA = smoothstep(0.0, 0.07, ph) * (1.0 - smoothstep(0.78, 1.0, ph));
       }
-
-      /* 鼠标拂动 */
-      vec2 toM = p.xy - uMouse.xy;
-      float md2 = dot(toM, toM);
-      p.xy += normalize(toM + vec2(0.0001)) * exp(-md2 * 0.55) * uMouseF;
 
       /* 颜色：金 -> 花色，中途微燃 */
       float cm = smoothstep(0.08, 0.92, e);
@@ -693,19 +712,19 @@ if (currentName) rebuildName();
 ============================================================ */
 let t = 0, clock = 0, last = performance.now();
 let mx = 0, my = 0, camX = 0, camY = 0;
-const mouseWorld = new THREE.Vector3(99, 99, 0);
-const mouseTarget = new THREE.Vector3(99, 99, 0);
 let dedicated = false;
 
-const dedicationEl = $('#dedication');
+const dedicationEl = $('#dedication'), cueEl = $('#cue'), refreshEl = $('#refresh');
 
 function restart(){
-  t = 0; dedicated = false;
+  t = 0; dedicated = false; morphStart = Infinity;
   uniforms.uAssemble.value = 0;
   uniforms.uProgress.value = 0;
   uniforms.uBurst.value = 0;
   uniforms.uBouquet.value = 0;
   dedicationEl.classList.remove('show');
+  cueEl.classList.remove('show');
+  refreshEl.classList.remove('show');
 }
 /* 名字相关的 URL / 标题 / 献词 全部同步 */
 function syncMeta(){
@@ -722,8 +741,13 @@ addEventListener('pointermove', e => {
   my = -((e.clientY / innerHeight) * 2 - 1);
 });
 canvas.addEventListener('pointerdown', () => {
-  if (t > T_MORPH_END + 1.4) restart();
+  /* 名字定格后：轻触/点击 -> 绽放（唯一的主动作） */
+  if (started && morphStart === Infinity && t > T_ASSEMBLE + 0.25){
+    morphStart = t + 0.35;
+    cueEl.classList.remove('show');
+  }
 });
+refreshEl.addEventListener('click', () => { if (started) restart(); });
 
 /* ---- 落地页：输入名字 -> 生成带尾巴的专属链接 ---- */
 const landingEl = $('#landing'), landingInput = $('#landingInput'), toastEl = $('#toast');
@@ -781,7 +805,6 @@ toastEl.addEventListener('click', async () => {
   }, 2200);
 });
 
-const tmpV = new THREE.Vector3();
 function frame(now){
   requestAnimationFrame(frame);
   let dt = (now - last) / 1000;
@@ -792,28 +815,26 @@ function frame(now){
 
   uniforms.uTime.value = clock;
   uniforms.uAssemble.value = clamp01(t / T_ASSEMBLE);
-  const prog = clamp01((t - T_MORPH_START) / T_MORPH);
+  const prog = morphStart === Infinity ? 0 : clamp01((t - morphStart) / T_MORPH);
   uniforms.uProgress.value = prog;
   uniforms.uBurst.value = (prog > 0 && prog < 1) ? 1 : 0;
-  uniforms.uBouquet.value = smooth01((t - T_MORPH_END - 0.25) / 1.6);
+  uniforms.uBouquet.value = morphStart === Infinity ? 0 : smooth01((t - morphStart - T_MORPH - 0.25) / 1.6);
   bgMat.uniforms.uTime.value = clock;
 
-  if (!dedicated && t > T_MORPH_END + 1.15){ dedicated = true; dedicationEl.classList.add('show'); }
+  /* 名字定格 -> 浮现「轻触绽放」提示；绽放完成 -> 献词 + 重播按钮 */
+  if (started && morphStart === Infinity && t > T_ASSEMBLE + 0.7) cueEl.classList.add('show');
+  if (!dedicated && morphStart !== Infinity && t > morphStart + T_MORPH + 1.15){
+    dedicated = true; dedicationEl.classList.add('show');
+  }
+  if (started && t > T_ASSEMBLE + 0.4) refreshEl.classList.add('show');
 
-  /* 相机：开场推镜 + 鼠标视差 */
-  window.__rose = { t, started, a: uniforms.uAssemble.value, p: uniforms.uProgress.value, q: uniforms.uBouquet.value };
+  window.__rose = { t, started, p: uniforms.uProgress.value, q: uniforms.uBouquet.value };
+  /* 相机：开场推镜 + 鼠标视差（轻微，不扰动粒子） */
   camX += (mx * 1.05 - camX) * 0.045;
   camY += (my * 0.62 - camY) * 0.045;
   const push = 1 + 0.25 * (1 - smooth01(t / 3.4));
   camera.position.set(camX, 0.9 + camY, baseZ * push);
   camera.lookAt(0, 0.9, 0);
-
-  /* 鼠标世界坐标（z=0 平面） */
-  tmpV.set(mx, my, 0.5).unproject(camera).sub(camera.position).normalize();
-  const tt = -camera.position.z / tmpV.z;
-  if (tt > 0) mouseTarget.copy(camera.position).addScaledVector(tmpV, tt);
-  mouseWorld.lerp(mouseTarget, 0.14);
-  uniforms.uMouse.value.copy(mouseWorld);
 
   composer.render();
 }

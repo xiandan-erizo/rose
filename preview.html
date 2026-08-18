@@ -36,28 +36,7 @@
   #dedication .sub{margin-top:15px;font-size:10px;letter-spacing:.52em;text-indent:.52em;
     color:rgba(243,222,176,.42);font-family:Georgia,"Times New Roman",serif}
 
-  /* 控件 */
-  #controls{position:fixed;left:50%;bottom:max(26px,calc(3.4vh + env(safe-area-inset-bottom)));
-    transform:translateX(-50%) translateY(14px);z-index:4;display:flex;align-items:center;gap:10px;
-    padding:9px 12px 9px 6px;border:1px solid var(--line);border-radius:999px;
-    background:rgba(10,8,18,.55);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-    opacity:0;pointer-events:none;transition:opacity 1.2s ease,transform 1.2s ease;
-    box-shadow:0 14px 44px rgba(0,0,0,.42)}
-  #controls.show{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
-  #nameInput{width:8.5em;height:38px;border:0;outline:0;background:transparent;color:var(--gold-soft);
-    font-family:inherit;font-size:16px;text-align:center;letter-spacing:.14em;border-radius:999px}
-  #nameInput::placeholder{color:rgba(243,222,176,.32)}
-  #nameInput:focus{background:rgba(233,180,92,.07)}
-  #replay{height:38px;padding:0 18px;border:1px solid rgba(224,182,102,.5);border-radius:999px;
-    background:rgba(224,182,102,.09);color:#efd9a4;font-family:inherit;font-size:13px;
-    letter-spacing:.22em;text-indent:.22em;cursor:pointer;white-space:nowrap;
-    transition:background .25s,border-color .25s,transform .15s}
-  #replay:hover{background:rgba(224,182,102,.22);border-color:rgba(240,200,120,.8)}
-  #replay:active{transform:scale(.96)}
-  #hint{position:fixed;left:50%;bottom:8px;transform:translateX(-50%);z-index:4;
-    font-size:9px;letter-spacing:.3em;text-indent:.3em;color:rgba(243,222,176,.3);
-    pointer-events:none;opacity:0;transition:opacity 1.5s ease;white-space:nowrap}
-  #hint.show{opacity:1}
+  /* 控件（仅落地页） */
 
   /* ---- 落地输入页 ---- */
   #landing{position:fixed;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;
@@ -82,18 +61,14 @@
   #start:hover{background:rgba(224,182,102,.26)}
   #landing .tip{margin-top:18px;font-size:10px;letter-spacing:.3em;text-indent:.3em;color:rgba(243,222,176,.35)}
 
-  /* ---- 复制链接 & 提示 ---- */
-  #copyLink{height:38px;padding:0 14px;border:1px solid rgba(224,182,102,.35);border-radius:999px;
-    background:rgba(224,182,102,.06);color:#e6cf9a;font-family:inherit;font-size:13px;
-    letter-spacing:.14em;text-indent:.14em;cursor:pointer;white-space:nowrap;transition:background .25s,border-color .25s}
-  #copyLink:hover{background:rgba(224,182,102,.18)}
-  #copyLink.ok{border-color:rgba(140,220,160,.55);color:#b9e8c6}
+  /* ---- 复制提示（轻点复制）---- */
   #toast{position:fixed;left:50%;bottom:calc(max(26px, 3.4vh + env(safe-area-inset-bottom)) + 76px);
     transform:translateX(-50%);z-index:6;font-size:11px;letter-spacing:.3em;text-indent:.3em;
-    color:rgba(243,222,176,.78);padding:10px 18px;border-radius:999px;border:1px solid var(--line);
-    background:rgba(10,8,18,.6);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    color:rgba(243,222,176,.85);padding:12px 20px;border-radius:999px;border:1px solid var(--line);
+    background:rgba(10,8,18,.66);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
     opacity:0;pointer-events:none;transition:opacity .6s ease;white-space:nowrap;max-width:92vw;overflow:hidden}
-  #toast.show{opacity:1}
+  #toast.show{opacity:1;pointer-events:auto;cursor:pointer}
+  #toast.show:hover{border-color:rgba(233,180,92,.5)}
 
   /* 加载 */
   #loading{position:fixed;inset:0;z-index:9;display:flex;flex-direction:column;gap:22px;
@@ -109,23 +84,17 @@
 
   /* ---- 手机 / 小屏 ---- */
   @media (max-width:560px){
-    #controls{gap:8px;padding:8px 10px 8px 4px}
-    #nameInput{width:6.5em;font-size:16px}
-    #copyLink{padding:0 10px;font-size:12px;letter-spacing:.06em;text-indent:.06em}
-    #replay{padding:0 12px;font-size:12px;letter-spacing:.14em;text-indent:.14em}
-    #hint{font-size:8px;letter-spacing:.22em;text-indent:.22em}
+    #dedication{padding:0 14px}
     #dedication .line{font-size:clamp(17px,4.8vw,22px);line-height:1.9}
     #dedication .sub{font-size:8.5px;letter-spacing:.38em;text-indent:.38em;margin-top:10px}
     #landing .card{padding:26px 20px 22px}
     #landingInput{width:8.5em;height:44px;font-size:16px}
     #start{height:44px;padding:0 16px}
-    #toast{font-size:9.5px;letter-spacing:.18em;text-indent:.18em}
+    #toast{font-size:9.5px;letter-spacing:.18em;text-indent:.18em;bottom:12%}
   }
   /* ---- 手机横屏 / 矮屏 ---- */
   @media (max-height:520px){
     #dedication{bottom:calc(env(safe-area-inset-bottom, 0px) + 112px)}
-    #hint{display:none}
-    #controls{bottom:max(14px,calc(2.4vh + env(safe-area-inset-bottom)))}
   }
 </style>
 </head>
@@ -138,13 +107,6 @@
   <div class="sub">MAY ALL YOUR DAYS BLOOM</div>
 </div>
 
-<div id="controls">
-  <input id="nameInput" maxlength="12" spellcheck="false" autocomplete="off" placeholder="换个名字">
-  <button id="copyLink">复制链接</button>
-  <button id="replay">再绽放</button>
-</div>
-<div id="hint">✦ 移动鼠标可拂动粒子 · 成形后点击画面重播 ✦</div>
-
 <div id="landing">
   <div class="card">
     <div class="lab">✦ 写下一个名字 ✦</div>
@@ -155,7 +117,7 @@
     <div class="tip">生成专属链接 · 把一束花送给 TA</div>
   </div>
 </div>
-<div id="toast">✦ 专属链接已生成 · 点击「复制链接」分享</div>
+<div id="toast">✦ 专属链接已生成 · 轻点此处复制</div>
 
 <div id="loading">
   <div class="glyph">✦</div>
@@ -733,10 +695,9 @@ let t = 0, clock = 0, last = performance.now();
 let mx = 0, my = 0, camX = 0, camY = 0;
 const mouseWorld = new THREE.Vector3(99, 99, 0);
 const mouseTarget = new THREE.Vector3(99, 99, 0);
-let controlsShown = false, dedicated = false;
+let dedicated = false;
 
-const dedicationEl = $('#dedication'), controlsEl = $('#controls'), hintEl = $('#hint');
-if (matchMedia('(pointer:coarse)').matches) hintEl.textContent = '✦ 轻触画面 · 重新绽放 ✦';
+const dedicationEl = $('#dedication');
 
 function restart(){
   t = 0; dedicated = false;
@@ -746,25 +707,13 @@ function restart(){
   uniforms.uBouquet.value = 0;
   dedicationEl.classList.remove('show');
 }
-/* 名字相关的 URL / 标题 / 献词 / 输入框 全部同步 */
+/* 名字相关的 URL / 标题 / 献词 全部同步 */
 function syncMeta(){
   const u = new URL(location);
   u.searchParams.set('n', currentName);
   history.replaceState(null, '', u);
   document.title = `${currentName} · 一束花开`;
   $('#dedLine').textContent = `${currentName}，${DEDICATION}`;
-  $('#nameInput').value = currentName;
-}
-async function restartWith(name){
-  const n = sanitizeName(name);
-  if (!n) return;
-  if (n !== currentName){
-    currentName = n;
-    await ensureNameFont(n);
-    rebuildName();
-  }
-  syncMeta();
-  restart();
 }
 
 addEventListener('resize', () => { computeLayout(); rebuildName(); });
@@ -775,14 +724,26 @@ addEventListener('pointermove', e => {
 canvas.addEventListener('pointerdown', () => {
   if (t > T_MORPH_END + 1.4) restart();
 });
-$('#replay').addEventListener('click', () => restartWith($('#nameInput').value));
-$('#nameInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') restartWith(e.target.value);
-});
 
 /* ---- 落地页：输入名字 -> 生成带尾巴的专属链接 ---- */
 const landingEl = $('#landing'), landingInput = $('#landingInput'), toastEl = $('#toast');
-let toastTimer = 0, copyTimer = 0;
+const TOAST_TEXT = '✦ 专属链接已生成 · 轻点此处复制';
+let toastTimer = 0;
+
+async function copyUrl(){
+  const url = location.href;
+  try{ await navigator.clipboard.writeText(url); return true; }
+  catch(e){
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = url; ta.style.cssText = 'position:fixed;opacity:0';
+      document.body.appendChild(ta); ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    }catch(e2){ return false; }
+  }
+}
 
 async function beginPlay(){
   const n = sanitizeName(landingInput.value);
@@ -793,39 +754,31 @@ async function beginPlay(){
     return;
   }
   currentName = n;
+  syncMeta();
+  copyUrl();                                    // 趁用户手势还在，静默尝试自动复制
   await ensureNameFont(n);
   rebuildName();
-  syncMeta();
   landingEl.classList.add('gone');
   setTimeout(() => landingEl.remove(), 1200);
   restart();
   started = true;
+  toastEl.textContent = TOAST_TEXT;
   toastEl.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 4500);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 6000);
 }
 $('#start').addEventListener('click', beginPlay);
 landingInput.addEventListener('keydown', e => { if (e.key === 'Enter') beginPlay(); });
 
-/* ---- 复制专属链接 ---- */
-const copyBtn = $('#copyLink');
-copyBtn.addEventListener('click', async () => {
-  const url = location.href;
-  let ok = false;
-  try{ await navigator.clipboard.writeText(url); ok = true; }
-  catch(e){
-    try{
-      const ta = document.createElement('textarea');
-      ta.value = url; ta.style.cssText = 'position:fixed;opacity:0';
-      document.body.appendChild(ta); ta.select();
-      ok = document.execCommand('copy');
-      ta.remove();
-    }catch(e2){}
-  }
-  copyBtn.textContent = ok ? '已复制 ✓' : '复制失败';
-  copyBtn.classList.toggle('ok', ok);
-  clearTimeout(copyTimer);
-  copyTimer = setTimeout(() => { copyBtn.textContent = '复制链接'; copyBtn.classList.remove('ok'); }, 1800);
+/* 轻点 toast 复制专属链接 */
+toastEl.addEventListener('click', async () => {
+  const ok = await copyUrl();
+  toastEl.textContent = ok ? '✦ 已复制 · 去分享吧' : '✦ 请从地址栏复制链接';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toastEl.classList.remove('show');
+    toastEl.textContent = TOAST_TEXT;
+  }, 2200);
 });
 
 const tmpV = new THREE.Vector3();
@@ -845,7 +798,6 @@ function frame(now){
   uniforms.uBouquet.value = smooth01((t - T_MORPH_END - 0.25) / 1.6);
   bgMat.uniforms.uTime.value = clock;
 
-  if (!controlsShown && t > 2.4){ controlsShown = true; controlsEl.classList.add('show'); hintEl.classList.add('show'); }
   if (!dedicated && t > T_MORPH_END + 1.15){ dedicated = true; dedicationEl.classList.add('show'); }
 
   /* 相机：开场推镜 + 鼠标视差 */
@@ -876,6 +828,7 @@ function frame(now){
   }catch(e){}
   if (started){
     syncMeta();                         // 带尾巴链接直达：标题/献词就位，直接播放
+    landingEl.remove();                 // 直达模式不显示输入卡片
   } else {
     setTimeout(() => landingInput.focus(), 500);
   }

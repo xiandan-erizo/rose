@@ -179,7 +179,8 @@ const T_ASSEMBLE   = 2.6;               // 星尘 -> 名字（名字定格后等
 const T_MORPH      = 3.7;               // 点击后：碎裂消散 -> 花束
 let morphStart = Infinity;              // 点击绽放的时刻（Infinity = 尚未点击）
 
-const isMobile = matchMedia('(pointer:coarse)').matches || innerWidth < 760;
+const coarse = matchMedia('(pointer:coarse)').matches;   // 触屏：用陀螺仪视差；桌面：用鼠标
+const isMobile = coarse || innerWidth < 760;
 const COUNT    = isMobile ? 13000 : 30000;
 const sizeScaleForHeight = h => Math.min(0.13, Math.max(0.045, 0.015 * h / Math.sqrt(COUNT)));
 
@@ -712,6 +713,29 @@ if (currentName) rebuildName();
 ============================================================ */
 let t = 0, clock = 0, last = performance.now();
 let mx = 0, my = 0, camX = 0, camY = 0;
+let oriX = 0, oriY = 0;          // 重力感应视差目标（手机）
+/* 启用陀螺仪视差：iOS 需在用户手势内请求权限，Android 直接监听 */
+let oriOn = false;
+function enableOrientation(){
+  if (oriOn) return;
+  const D = window.DeviceOrientationEvent;
+  if (!D) return;
+  const attach = () => {
+    oriOn = true;
+    addEventListener('deviceorientation', e => {
+      if (e.gamma == null || e.beta == null) return;
+      const nx = Math.max(-1, Math.min(1, e.gamma / 35));          // 左右倾 ±35° -> ±1
+      const ny = Math.max(-1, Math.min(1, (e.beta - 65) / 30));    // 前后倾，以正常握持(~65°)为中心
+      oriX += (nx - oriX) * 0.12;
+      oriY += (ny - oriY) * 0.12;
+    });
+  };
+  if (typeof D.requestPermission === 'function'){
+    D.requestPermission().then(s => { if (s === 'granted') attach(); }).catch(() => {});
+  } else {
+    attach();
+  }
+}
 let dedicated = false;
 
 const dedicationEl = $('#dedication'), cueEl = $('#cue'), refreshEl = $('#refresh');
@@ -741,6 +765,7 @@ addEventListener('pointermove', e => {
   my = -((e.clientY / innerHeight) * 2 - 1);
 });
 canvas.addEventListener('pointerdown', () => {
+  enableOrientation();             // 借助本次手势，顺带申请 iOS 陀螺仪权限
   /* 名字定格后：轻触/点击 -> 绽放（唯一的主动作） */
   if (started && morphStart === Infinity && t > T_ASSEMBLE + 0.25){
     morphStart = t + 0.35;
@@ -770,6 +795,7 @@ async function copyUrl(){
 }
 
 async function beginPlay(){
+  enableOrientation();             // 落地页提交也是用户手势，提前申请陀螺仪权限
   const n = sanitizeName(landingInput.value);
   if (!n){
     landingInput.classList.remove('err'); void landingInput.offsetWidth;
@@ -828,10 +854,13 @@ function frame(now){
   }
   if (started && t > T_ASSEMBLE + 0.4) refreshEl.classList.add('show');
 
-  window.__rose = { t, started, p: uniforms.uProgress.value, q: uniforms.uBouquet.value };
+  window.__rose = { t, started, p: uniforms.uProgress.value, q: uniforms.uBouquet.value, cx: camera.position.x, cy: camera.position.y };
   /* 相机：开场推镜 + 鼠标视差（轻微，不扰动粒子） */
-  camX += (mx * 1.05 - camX) * 0.045;
-  camY += (my * 0.62 - camY) * 0.045;
+  /* 触屏走陀螺仪视差，桌面走鼠标；都带出花束 3D 纵深 */
+  const pX = coarse ? oriX : mx;
+  const pY = coarse ? oriY : my;
+  camX += (pX * 1.05 - camX) * 0.045;
+  camY += (pY * 0.62 - camY) * 0.045;
   const push = 1 + 0.25 * (1 - smooth01(t / 3.4));
   camera.position.set(camX, 0.9 + camY, baseZ * push);
   camera.lookAt(0, 0.9, 0);
